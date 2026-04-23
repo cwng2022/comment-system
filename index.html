@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級吐槽牆 - 純淨版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#0a0a0a] text-zinc-100 selection:bg-orange-500/30">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-zinc-800/50">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/20">
+                    <i data-lucide="message-square" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">班級吐槽牆</h1>
+            </div>
+            <button onclick="openModal()" class="flex items-center gap-2 bg-zinc-100 text-zinc-900 px-4 py-2 rounded-full font-medium hover:bg-white transition-colors active:scale-95">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>我要吐槽</span>
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="max-w-4xl mx-auto px-4 pb-4 overflow-x-auto no-scrollbar">
+            <div id="filter-container" class="flex gap-2">
+                <button onclick="setFilter('全部')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-zinc-100 border-zinc-100 text-zinc-900" data-category="全部">全部</button>
+                <button onclick="setFilter('學校')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300" data-category="學校">學校</button>
+                <button onclick="setFilter('功課')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300" data-category="功課">功課</button>
+                <button onclick="setFilter('生活')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300" data-category="生活">生活</button>
+                <button onclick="setFilter('其他')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300" data-category="其他">其他</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <div id="list-container" class="columns-1 sm:columns-2 gap-4 space-y-4">
+            <!-- Items injected by JS -->
+        </div>
+
+        <div id="empty-state" class="hidden text-center py-20">
+            <div class="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-800">
+                <i data-lucide="message-square" class="w-8 h-8 text-zinc-700"></i>
+            </div>
+            <p class="text-zinc-500 font-medium">暫時還沒有吐槽，快來做第一個吧！</p>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">發表吐槽</h2>
+                    <button onclick="closeModal()" class="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <form id="complaint-form" class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">分類</label>
+                        <div id="category-selector" class="flex flex-wrap gap-2">
+                            <button type="button" onclick="selectCategory('學校')" class="cat-chip px-4 py-2 rounded-xl text-sm font-medium transition-all border bg-orange-600 border-orange-500 text-white" data-cat="學校">學校</button>
+                            <button type="button" onclick="selectCategory('功課')" class="cat-chip px-4 py-2 rounded-xl text-sm font-medium transition-all border bg-zinc-800 border-zinc-700 text-zinc-400" data-cat="功課">功課</button>
+                            <button type="button" onclick="selectCategory('生活')" class="cat-chip px-4 py-2 rounded-xl text-sm font-medium transition-all border bg-zinc-800 border-zinc-700 text-zinc-400" data-cat="生活">生活</button>
+                            <button type="button" onclick="selectCategory('其他')" class="cat-chip px-4 py-2 rounded-xl text-sm font-medium transition-all border bg-zinc-800 border-zinc-700 text-zinc-400" data-cat="其他">其他</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">內容</label>
+                        <textarea id="content-input" required placeholder="在這裡寫下你的吐槽..." class="w-full h-32 bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500/50 transition-colors resize-none"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                        <span>發布</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = '全部';
+        let currentSelectedCategory = '學校';
+
+        // 1. Data Schema & Core Functions
+        
+        function loadData() {
+            const data = localStorage.getItem("records");
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveData(newRecord) {
+            const records = loadData();
+            records.push(newRecord);
+            localStorage.setItem("records", JSON.stringify(records));
+            renderList();
+        }
+
+        function renderList() {
+            const records = loadData();
+            const listContainer = document.getElementById('list-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            // Filtering
+            const filtered = currentFilter === '全部' 
+                ? records 
+                : records.filter(r => r.category === currentFilter);
+            
+            // Sorting (latest first)
+            filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            listContainer.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(record => {
+                    const card = createCard(record);
+                    listContainer.appendChild(card);
+                });
+            }
+            
+            lucide.createIcons();
+        }
+
+        // UI Helpers
+        function createCard(record) {
+            const div = document.createElement('div');
+            div.className = 'break-inside-avoid animate-in fade-in slide-in-from-bottom-4 duration-300';
+            
+            const categoryClass = getCategoryStyles(record.category);
+            const date = new Date(record.createdAt).toLocaleDateString();
+
+            div.innerHTML = `
+                <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-700 transition-colors mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md ${categoryClass}">
+                            ${record.category}
+                        </span>
+                        <span class="text-zinc-500 text-[10px] font-mono">
+                            ${date}
+                        </span>
+                    </div>
+                    <p class="text-zinc-200 leading-relaxed mb-6 whitespace-pre-wrap">${record.content}</p>
+                    <div class="flex items-center justify-between">
+                        <button onclick="handleLike('${record.id}')" class="flex items-center gap-2 text-zinc-400 hover:text-orange-500 transition-colors group/btn">
+                            <div class="p-2 rounded-full hover:bg-orange-500/10 transition-colors">
+                                <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-sm font-medium">${record.likes || 0}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        function getCategoryStyles(category) {
+            switch (category) {
+                case '學校': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+                case '功課': return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+                case '生活': return 'bg-green-500/10 text-green-400 border border-green-500/20';
+                default: return 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20';
+            }
+        }
+
+        // Interaction Actions
+        function openModal() {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('content-input').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('complaint-form').reset();
+            selectCategory('學校');
+        }
+
+        function selectCategory(cat) {
+            currentSelectedCategory = cat;
+            document.querySelectorAll('.cat-chip').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.classList.add('bg-orange-600', 'border-orange-500', 'text-white');
+                    btn.classList.remove('bg-zinc-800', 'border-zinc-700', 'text-zinc-400');
+                } else {
+                    btn.classList.remove('bg-orange-600', 'border-orange-500', 'text-white');
+                    btn.classList.add('bg-zinc-800', 'border-zinc-700', 'text-zinc-400');
+                }
+            });
+        }
+
+        function setFilter(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.category === cat) {
+                    btn.className = 'filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-zinc-100 border-zinc-100 text-zinc-900';
+                } else {
+                    btn.className = 'filter-btn px-4 py-1.5 rounded-full text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300';
+                }
+            });
+            renderList();
+        }
+
+        function handleLike(id) {
+            const records = loadData();
+            const index = records.findIndex(r => r.id === id);
+            if (index !== -1) {
+                records[index].likes = (records[index].likes || 0) + 1;
+                localStorage.setItem("records", JSON.stringify(records));
+                renderList();
+            }
+        }
+
+        // Form Submit
+        document.getElementById('complaint-form').onsubmit = (e) => {
+            e.preventDefault();
+            const content = document.getElementById('content-input').value.trim();
+            if (!content) return;
+
+            const newRecord = {
+                id: Date.now() + "_" + Math.random().toString(36).slice(2,6),
+                createdAt: new Date().toISOString(),
+                content: content,
+                category: currentSelectedCategory,
+                likes: 0,
+                status: "active"
+            };
+
+            saveData(newRecord);
+            closeModal();
+        };
+
+        // Init
+        window.onload = () => {
+            renderList();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
