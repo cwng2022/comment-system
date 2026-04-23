@@ -94,21 +94,52 @@
     </div>
 
     <script>
+        // ═══════════════════════════════════════════════════════════════
+        // Week 4 新增：後端 API 設定
+        // ↓ 將下面嘅 URL 換成你 Apps Script Web App 嘅 URL（SETUP-WEEK4.md）
+        const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+        // ═══════════════════════════════════════════════════════════════
+
         let currentFilter = '全部';
         let currentSelectedCategory = '學校';
 
         // 1. Data Schema & Core Functions
-        
+
         function loadData() {
             const data = localStorage.getItem("records");
             return data ? JSON.parse(data) : [];
         }
 
+        /**
+         * 向 Apps Script 發送同步請求（背景執行，失敗不影響 UI）
+         * @param {Object} payload - { action, record | id, changes }
+         */
+        async function syncToSheet(payload) {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === "PASTE_YOUR_APPS_SCRIPT_URL_HERE") {
+                console.warn("[Week 4] APPS_SCRIPT_URL 未設定，資料只存在 localStorage");
+                return;
+            }
+            try {
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" }, // 避 CORS preflight
+                    body: JSON.stringify(payload)
+                });
+                console.log("[Week 4] Sheet sync OK:", payload.action);
+            } catch (err) {
+                console.warn("[Week 4] Sheet sync failed:", err);
+            }
+        }
+
         function saveData(newRecord) {
+            // Local first：即時顯示，離線都 work
             const records = loadData();
             records.push(newRecord);
             localStorage.setItem("records", JSON.stringify(records));
             renderList();
+
+            // Week 4：同步去 Sheet（CREATE）
+            syncToSheet({ action: "create", record: newRecord });
         }
 
         function renderList() {
@@ -224,6 +255,13 @@
                 records[index].likes = (records[index].likes || 0) + 1;
                 localStorage.setItem("records", JSON.stringify(records));
                 renderList();
+
+                // Week 4：同步去 Sheet（UPDATE）— 只傳變咗嘅欄位
+                syncToSheet({
+                    action: "update",
+                    id: id,
+                    changes: { likes: records[index].likes }
+                });
             }
         }
 
