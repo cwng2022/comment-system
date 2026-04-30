@@ -94,33 +94,53 @@
     </div>
 
     <script>
-        // ---------- Google Apps Script 同步設定 ----------
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbys5dl_J-Qd7333l2DQMm0ZW4Ha8bN9igIzHuTUhRXwMqcUvnNigQ2gVPCJKKUwRvWlSg/exec"; // 請替換為你的 GAS 部署網址
+        // ============================
+        // 設定區：請貼上你的 Apps Script 部署 URL
+        // ============================
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJyF3Xce57F8PSke6nDPG-eclSyvUOkLLIq05xlfWQguave7DOP7JLBRCf5GVaD5pr/exec";
 
-        /**
-         * 將 payload 透過 POST 發送到 Google Sheet 後端
-         * @param {Object} payload - 需包含 action 與對應資料
-         */
-        function syncToSheet(payload) {
-            if (APPS_SCRIPT_URL === "PASTE_YOUR_APPS_SCRIPT_URL_HERE") {
-                console.warn("APPS_SCRIPT_URL 尚未設定，略過同步");
-                return;
+        // ============================
+        // Google Sheets 同步輔助函式
+        // ============================
+        async function syncToSheet(payload) {
+            if (APPS_SCRIPT_URL.includes("PASTE")) return;
+            try {
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.warn("同步至 Google Sheet 失敗", e);
             }
-            fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => console.log('已同步至 Google Sheet:', data))
-            .catch(err => console.warn('同步失敗 (無損前端):', err));
         }
 
-        // ---------- 原始應用程式邏輯（僅修改資料儲存相關）----------
+        // 從 Sheet 讀取所有記錄（用 POST 模擬）
+        async function fetchRecordsFromSheet() {
+            if (APPS_SCRIPT_URL.includes("PASTE")) return null;
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "read" })
+                });
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    return data;
+                }
+                return null;
+            } catch (e) {
+                console.warn("從 Sheet 讀取失敗", e);
+                return null;
+            }
+        }
+
+        // ============================
+        // 核心變數與函式
+        // ============================
         let currentFilter = '全部';
         let currentSelectedCategory = '學校';
 
-        // 1. Data Schema & Core Functions
         function loadData() {
             const data = localStorage.getItem("records");
             return data ? JSON.parse(data) : [];
@@ -130,7 +150,6 @@
             const records = loadData();
             records.push(newRecord);
             localStorage.setItem("records", JSON.stringify(records));
-            // 同步新增至 Google Sheet
             syncToSheet({ action: "create", record: newRecord });
             renderList();
         }
@@ -247,12 +266,7 @@
             if (index !== -1) {
                 records[index].likes = (records[index].likes || 0) + 1;
                 localStorage.setItem("records", JSON.stringify(records));
-                // 同步按讚數到 Google Sheet
-                syncToSheet({
-                    action: "update",
-                    id: id,
-                    changes: { likes: records[index].likes }
-                });
+                syncToSheet({ action: "update", id: id, changes: { likes: records[index].likes } });
                 renderList();
             }
         }
@@ -276,8 +290,17 @@
             closeModal();
         };
 
-        // Init
-        window.onload = () => {
+        // ============================
+        // 初始化：先從 Sheet 同步，再渲染 UI
+        // ============================
+        window.onload = async () => {
+            // 嘗試從 Google Sheet 抓取最新資料並更新 localStorage
+            const remoteRecords = await fetchRecordsFromSheet();
+            if (remoteRecords) {
+                // 簡單合併策略：以遠端為準，覆蓋本地（因為遠端是統一的資料源）
+                localStorage.setItem("records", JSON.stringify(remoteRecords));
+            }
+            // 渲染畫面（使用 localStorage 中的資料）
             renderList();
             lucide.createIcons();
         };
