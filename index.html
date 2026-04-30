@@ -94,52 +94,45 @@
     </div>
 
     <script>
-        // ═══════════════════════════════════════════════════════════════
-        // Week 4 新增：後端 API 設定
-        // ↓ 將下面嘅 URL 換成你 Apps Script Web App 嘅 URL（SETUP-WEEK4.md）
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6_4LLmLwdPRfIyceaoZdSqzEm_yjIXqSONRUkMmhuZtuUkmXOsZeQ5TY5TLykpFLQ9g/exec";
-        // ═══════════════════════════════════════════════════════════════
+        // ---------- Google Apps Script 同步設定 ----------
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbys5dl_J-Qd7333l2DQMm0ZW4Ha8bN9igIzHuTUhRXwMqcUvnNigQ2gVPCJKKUwRvWlSg/exec"; // 請替換為你的 GAS 部署網址
 
+        /**
+         * 將 payload 透過 POST 發送到 Google Sheet 後端
+         * @param {Object} payload - 需包含 action 與對應資料
+         */
+        function syncToSheet(payload) {
+            if (APPS_SCRIPT_URL === "PASTE_YOUR_APPS_SCRIPT_URL_HERE") {
+                console.warn("APPS_SCRIPT_URL 尚未設定，略過同步");
+                return;
+            }
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => console.log('已同步至 Google Sheet:', data))
+            .catch(err => console.warn('同步失敗 (無損前端):', err));
+        }
+
+        // ---------- 原始應用程式邏輯（僅修改資料儲存相關）----------
         let currentFilter = '全部';
         let currentSelectedCategory = '學校';
 
         // 1. Data Schema & Core Functions
-
         function loadData() {
             const data = localStorage.getItem("records");
             return data ? JSON.parse(data) : [];
         }
 
-        /**
-         * 向 Apps Script 發送同步請求（背景執行，失敗不影響 UI）
-         * @param {Object} payload - { action, record | id, changes }
-         */
-        async function syncToSheet(payload) {
-            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === "PASTE_YOUR_APPS_SCRIPT_URL_HERE") {
-                console.warn("[Week 4] APPS_SCRIPT_URL 未設定，資料只存在 localStorage");
-                return;
-            }
-            try {
-                await fetch(APPS_SCRIPT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain" }, // 避 CORS preflight
-                    body: JSON.stringify(payload)
-                });
-                console.log("[Week 4] Sheet sync OK:", payload.action);
-            } catch (err) {
-                console.warn("[Week 4] Sheet sync failed:", err);
-            }
-        }
-
         function saveData(newRecord) {
-            // Local first：即時顯示，離線都 work
             const records = loadData();
             records.push(newRecord);
             localStorage.setItem("records", JSON.stringify(records));
-            renderList();
-
-            // Week 4：同步去 Sheet（CREATE）
+            // 同步新增至 Google Sheet
             syncToSheet({ action: "create", record: newRecord });
+            renderList();
         }
 
         function renderList() {
@@ -254,14 +247,13 @@
             if (index !== -1) {
                 records[index].likes = (records[index].likes || 0) + 1;
                 localStorage.setItem("records", JSON.stringify(records));
-                renderList();
-
-                // Week 4：同步去 Sheet（UPDATE）— 只傳變咗嘅欄位
+                // 同步按讚數到 Google Sheet
                 syncToSheet({
                     action: "update",
                     id: id,
                     changes: { likes: records[index].likes }
                 });
+                renderList();
             }
         }
 
